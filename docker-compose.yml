@@ -1,0 +1,49 @@
+version: "3.9"
+services:
+  app:
+    image: ghcr.io/${GITHUB_ACTOR}/${IMAGE_NAME}:${IMAGE_TAG}
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123
+      DB_NAME: myapp
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -q http://localhost:3000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - myinternalnetwork
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: myapp
+    volumes:
+      - mypostgresdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d myapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - myinternalnetwork
+
+volumes:
+  mypostgresdata:
+
+networks:
+  myinternalnetwork:
+    driver: bridge
